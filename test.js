@@ -1,13 +1,13 @@
 /* eslint-disable no-console */
 "use strict";
 
-const fs = require("fs").promises;
 const path = require("path");
 
+const sharp = require('sharp');
 const assert = require("assert");
 
-const phash = require("./index");
-const dist = require("./distance");
+const phash = require("./src/phash");
+const dist = require("./src/distance");
 
 const lenna_png = "Lenna.png";
 const lenna_jpg = "Lenna.jpg";
@@ -25,14 +25,32 @@ const fb5 = "fb5.jpg";
 const fb6 = "fb6.jpg";
 
 function getPHash(img) {
-  return fs.readFile(path.join(".", "img", img)).then(buf => phash(buf));
+  return sharp(path.join(".", "img", img))
+      .greyscale()
+      .resize(32, 32, { fit: "fill" })
+      .rotate()
+      .raw()
+      .toBuffer()
+      .then(buf => {
+        return phash([...buf])
+      })
 }
 
 function bitCount(hash) {
-  return hash.replace(/0/g, "").length;
+  const high = parseInt(hash.substring(0, 8), 16);
+  const low = parseInt(hash.substr(8, 16), 16);
+  const bin = (high).toString(2) + (low).toString(2);
+  return bin.replace(/[^1]/g, '').length;
 }
 
-function testCase(img1, img2, cond) {
+function testPHash(img, hash) {
+  return getPHash(img).then(value => {
+    assert.strictEqual(value, hash, `Missmatch at ${img} on hash ${value}. Expected ${hash}`)
+    console.log("Test PASS", img, hash)
+  });
+}
+
+function testDifference(img1, img2, cond) {
   return Promise.all([getPHash(img1), getPHash(img2)]).then(([hash1, hash2]) => {
     const d = dist(hash1, hash2);
     const text = `${img1} vs ${img2}
@@ -50,14 +68,17 @@ const LIKELY_SIMILAR = d => d <= 10;
 const NOT_SIMILAR = d => d > 10;
 
 Promise.all([
-  testCase(lenna_png, lenna_jpg, SIMILAR),
-  testCase(lenna_jpg, lenna_sepia, SIMILAR),
-  testCase(lenna_jpg, lenna_exif, SIMILAR),
-  testCase(fb, xing, LIKELY_SIMILAR),
-  testCase(fb1, fb2, NOT_SIMILAR),
-  testCase(fb1, lenna_jpg, NOT_SIMILAR),
-  testCase(fb3, fb4, NOT_SIMILAR),
-  testCase(fb5, fb6, NOT_SIMILAR)
+  testPHash(lenna_png, '8da95aea66452c91'),
+  testPHash(lenna_jpg, '8da95aea66452c91'),
+  testPHash(fb, '7188cfa06c3f0e9b'),
+  testDifference(lenna_png, lenna_jpg, SIMILAR),
+  testDifference(lenna_jpg, lenna_sepia, SIMILAR),
+  testDifference(lenna_jpg, lenna_exif, SIMILAR),
+  testDifference(fb, xing, LIKELY_SIMILAR),
+  testDifference(fb1, fb2, NOT_SIMILAR),
+  testDifference(fb1, lenna_jpg, NOT_SIMILAR),
+  testDifference(fb3, fb4, NOT_SIMILAR),
+  testDifference(fb5, fb6, NOT_SIMILAR)
 ]).catch(err => {
   console.log("Test fail");
   console.log(err.message);

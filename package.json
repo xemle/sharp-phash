@@ -4,7 +4,8 @@
   "description": "sharp based perceptual hash implementation",
   "main": "index.js",
   "scripts": {
-    "test": "node test.js"
+    "test": "mocha",
+    "test:watch": "onchange 'src/**/*.js' -- npm run test"
   },
   "files": [
     "*.js",
@@ -19,14 +20,20 @@
   ],
   "author": "",
   "license": "MIT",
-  "dependencies": {
-    "sharp": "^0.25.4"
-  },
   "devDependencies": {
+    "chai": "^4.2.0",
     "eslint": "^5.16.0",
-    "eslint-plugin-promise": "^4.1.1"
+    "eslint-plugin-promise": "^4.1.1",
+    "mocha": "^8.0.1",
+    "onchange": "^7.0.2",
+    "sharp": "^0.25.4"
   },
   "engines": {
     "node": ">= 8.10"
+  },
+  "mocha": {
+    "spec": [
+      "src/**/*.test.js"
+    ]
   }
 }
