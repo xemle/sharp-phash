@@ -38,8 +38,23 @@ const prefix = (s, len, char) => {
   return s;
 }
 
-const toHex = (high, low) => {
-  return prefix((high).toString(16), 8, '0') + prefix((low).toString(16), 8, '0');
+const multiFormatValue = (high, low) => {
+  return {
+    high,
+    low,
+    toHex: function() {
+      return prefix((this.high).toString(16), 8, '0') + prefix((this.low).toString(16), 8, '0');
+    },
+    toBin: function() {
+      return prefix((this.high).toString(2), 32, '0') + prefix((this.low).toString(2), 32, '0');
+    },
+    toDec: function() {
+      return BigInt('0x' + this.toHex());
+    },
+    toString: function() {
+      return this.toBin();
+    }
+  };
 }
 
 const phash = (data) => {
@@ -54,7 +69,7 @@ const phash = (data) => {
   const avg = getAverage(lowFreq);
   const [high, low] = threshold(lowFreq, avg);
 
-  return toHex(high, low);
+  return multiFormatValue(high, low);
 }
 
 module.exports = phash;
